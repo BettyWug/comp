@@ -4,21 +4,40 @@ from ngramprobs import ngrams, ngramcounts, GTprobs
 
 # BL: This function creates list of features from string
 def features(s, numResults, uniGT, biGT, triGT, quadGT):
-    feature_array=[]
-    feature_array.extend([aveSenLen(s)])
-    feature_array.extend([senLenVar(s)])
-    feature_array.extend([aveWordLen(s)])
-    feature_array.extend([wordlengthSD(s)])
-    
-    feature_array.extend(bagofwords(s, numResults))
-    feature_array.extend([getngramprobs(s, uniGT, biGT, triGT, quadGT)])
+##    feature_array=[]
+##    feature_array.extend([aveSenLen(s)])
+##    feature_array.extend([senLenVar(s)])
+##    feature_array.extend([aveWordLen(s)])
+##    feature_array.extend([wordlengthSD(s)])
 
     #getPosDist(input) #requires numpy
-    feature_array.extend([getAveTTR(s, 100)]) #arbitrary n
-    feature_array.extend([getUniPerp(s, getUniCounts(s))])
-
-    print "Features are: avg sent length, avg sent sd, avg word len, avg word sd, most frequent words (n), n-gram log-probs, type-token ratio, PERPLEXITY?"
-    return feature_array
+    #feature_array.extend([getAveTTR(s, 100)]) #arbitrary n
+    #feature_array.extend([getUniPerp(s, getUniCounts(s))])
+    
+##    bag=(bagofwords(s, numResults))
+##    #print bag
+##    print s[:100]
+##    bagout=""
+##    for n in range(numResults):
+##        bagout+=",'freqword"+str(n)+"':bag["+str(n)+"]"
+##    print bagout
+    #[u, b, t, q]=getngramprobs(s, uniGT, biGT, triGT, quadGT)
+    out="{'avg sent len': aveSenLen(s),'avg sent sd':senLenVar(s)"
+    out+=",'avg word len':aveWordLen(s),'avg word sd':wordlengthSD(s)"
+    #out+=",'type-token ratio':getAveTTR(s, 100)"
+    #out+=",'unigram log-probs':u,'bigram log-probs':b,'quadgram log-probs':q"
+    #out+=",'trigram log-probs':t"
+    #out+=bagout[1:]
+    out+="}"
+    try:
+        features=eval(out)
+    except(IndexError):
+        print bag
+        print s[:100]
+        return 999
+    print out
+    #print "Features are: avg sent len, avg sent sd, avg word len, avg word sd, most frequent words (n), n-gram log-probs, type-token ratio, PERPLEXITY?"
+    return features
 
 ##### Metrics #####
 def accuracy():
@@ -71,6 +90,10 @@ while len(otherlist)<len(AuthorBookList):
         otherlist.append(randNums[i])
     i+=1
 
+#######DEBUG##########
+AuthorBookList=[0]
+otherlist=[5]
+
 #compile training set
 labelled_books_author = ([(text[i], randAuthor) for i in AuthorBookList])
 labelled_books_other = ([(text[o], author[o]) for o in otherlist])
@@ -86,8 +109,10 @@ for idx in AuthorBookList:
 [uniGT, biGT, triGT, quadGT]=GTprobs(u2,b2,t2,q2)
 
 #create feature set for training data
+#try:
 training_feature_sets = [(features(text, 5, uniGT, biGT, triGT, quadGT), author) for (text, author) in training_set]
-
+    
+print training_feature_sets
 #train classifier
 classifier = nltk.NaiveBayesClassifier.train(training_feature_sets)
 
@@ -95,8 +120,8 @@ classifier = nltk.NaiveBayesClassifier.train(training_feature_sets)
 classifier.show_most_informative_features(5)
 
 #test classifier
-classifier.classify(features(text[author_test])) #author
-classifier.classify(features(text[i])) #non-author
+classifier.classify(features(text[author_test], 5, uniGT, biGT, triGT, quadGT)) #author
+classifier.classify(features(text[i], 5, uniGT, biGT, triGT, quadGT)) #non-author
 
 
 

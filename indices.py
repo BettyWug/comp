@@ -260,7 +260,7 @@ def wordlengthSD(s):
     uniwords=tokenize(s)
     #list of word lengths
     wordlengths=[len(uniwords[i]) for i in range(len(uniwords))]
-    if len(wordlengths) >=1:
+    if len(wordlengths) <=1:
             return 0    
     #calculate standard deviation
     avg=float(sum(wordlengths))/len(wordlengths)
