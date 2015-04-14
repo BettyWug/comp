@@ -1,6 +1,14 @@
-import math, nltk, numpy, random
+import math, nltk, random, re #numpy
+from collections import Counter
+from nltk import SimpleGoodTuringProbDist, FreqDist
+from nltk import pos_tag
+#from ngramprobs import ngrams, ngramcounts, GTprobs
+
+
 
 ### Input: a string
+### Author: Nick
+### Reviewed: 
 ### Output: the same string, but tokenized into a list using the
 ###  word_tokenize() function from nltk
 ### Comments:
@@ -16,6 +24,26 @@ def tokenize(s):
 	output = nltk.word_tokenize(s)
 	return output
 
+### Author: Betty
+### Reviewed: 
+### Input: a filename
+### Output: ttokenised list with sentence boundary markers
+###  word_tokenize() function from nltk
+### Comments:
+###  -like tokenize, except when punctuation is relevant
+def parse(line):
+    #f=open(filename)
+    uniwords=['<s>']
+    line.lower()
+    nopunct=re.sub("[^a-zA-Z?!.]", " ", line)#strip punctuation, except ?!.
+    delimited=re.sub("(\.|\!|\?)", " <\s> <s> ", nopunct) #change .?! to sentence boundary markers #DEBUG
+    splitwords=delimited.split()
+    uniwords.extend(splitwords)
+    uniwords.extend(['<\s>'])
+    return uniwords
+
+### Author: Nick
+### Reviewed: 
 ### Input: a string
 ### Output: a list of the sentence lengths in that string
 ### Comments:
@@ -38,6 +66,8 @@ def getSenLens(input):
 			counter = 0
 	return senLens
 
+### Author: Nick
+### Reviewed: 
 ### Input: a string
 ### Output: a list of word lengths in that string
 ###
@@ -48,6 +78,8 @@ def getWordLens(input):
 		wordLens.append(len(w))
 	return wordLens
 
+### Author: Nick
+### Reviewed: 
 ### Input: a string
 ### Output: A dictionary of unigram counts over that string
 ### Comments:
@@ -65,7 +97,8 @@ def getUniCounts(input):
 
 ### END OF HELPER FUNCTIONS
 
-
+### Author: Nick
+### Reviewed: Betty (removed numpy)
 ### Input: a string
 ### Output: average sentence length over that string
 ### Comments:
@@ -74,8 +107,10 @@ def aveSenLen(input):
 	if len(input) == 0:
 		return 0
 	senLens = getSenLens(input)
-	return numpy.mean(senLens)
+	return sum(senLens)/float(len(senLens))
 
+### Author: Nick
+### Reviewed: Betty (removed numpy, divide by 0 error)
 ### Input: a string
 ### Output: standard deviation of sentence length over that string
 ### Comments:
@@ -84,24 +119,35 @@ def senLenVar(input):
 	if len(input) == 0:
 		return 0
 	senLens = getSenLens(input)
-	std = numpy.std(senLens)
+	if len(senLens) >= 1:
+		return 0
+	#std = numpy.std(senLens)
+	avg=float(sum(senLens))/len(senLens)
+	sumsq=sum([(avg-senLens[i])**2 for i in range(len(senLens))])
+	std = math.sqrt(sumsq/(len(senLens)-1))
 	return std
 
+### Author: Nick
+### Reviewed: Betty (removed numpy)
 ### Input: a string
 ### Output: average word length over that string
 ### Comments:
 ###  -Basically the same as for getSenLens()
 def aveWordLen(input):
 	wordLens = getWordLens(input)
-	ave = numpy.mean(wordLens)
-	return ave
+	if len(wordLens) == 0:
+		return 0
+	return sum(wordLens)/float(len(wordLens))
 
+### Author: Nick
+### Reviewed: 
 ### Input: a string
 ### Output: a dictionary with proportions of each POS in the input
 ### Comments:
 ###  -Careful, very slow
 ###  -There is no entry in the dictionary for POS's unattested in
 ###    the input
+###  -Betty: script relies on numpy
 def getPosDist(input):
 	words = tokenize(input)
 	output = dict()
@@ -113,11 +159,13 @@ def getPosDist(input):
 			output[pair[1]] = 1
 		else:
 			output[pair[1]] += 1
-	total = numpy.sum(output.values())
+	total = sum(output.values())
 	for t in output:
 		output[t] /= total
 	return output
 
+### Author: Nick
+### Reviewed: 
 ### Input: a string, a sample size
 ### Output: Average type-to-token ratio over a sample size of n
 ###  tokens in the input string
@@ -143,13 +191,14 @@ def getAveTTR(input, n):
 			else:
 				counts[w] = 1
 		counts = counts.values()
-		tokenCount = numpy.sum(counts)
+		tokenCount = sum(counts)
 		typeCount = len(counts)
 		ttr = float(typeCount)/float(tokenCount)
 		ttrs.append(ttr)
-	ave = numpy.mean(ttrs)
-	return ave
+	return sum(ttrs)/float(len(ttrs))
 
+### Author: Nick
+### Reviewed: 
 ### Input: a string, and a dictionary of unigram counts
 ### Output: perplexity of the string under the language model
 ###  defined by using the smoothing method from midterm of the counts
@@ -201,4 +250,126 @@ def getUniPerp(s, counts):
 	pp = math.pow(10, pp)
 	return pp
 
+### Author: Betty
+### Reviewed: 
+### Input: a string
+### Output: sd of word lengths
+### Comments:
+###  -
+def wordlengthSD(s):
+    uniwords=tokenize(s)
+    #list of word lengths
+    wordlengths=[len(uniwords[i]) for i in range(len(uniwords))]
+    if len(wordlengths) >=1:
+            return 0    
+    #calculate standard deviation
+    avg=float(sum(wordlengths))/len(wordlengths)
+    sumsq=sum([(avg-wordlengths[i])**2 for i in range(len(wordlengths))])
+    return math.sqrt(sumsq/(len(wordlengths)-1))
 
+### Author: Betty
+### Reviewed: 
+### Input: a string, return n number of top results
+### Output: n most common words (and POS tags)
+### Comments:
+###  -POS tags require numpy
+def bagofwords(s, numResults):
+
+    # bag of words (POS and raw words)
+    uniwords=tokenize(s)
+    #tagged=nltk.pos_tag(uniwords)
+
+    #count word tokens
+    unicount=Counter(uniwords)
+    # count tags
+    #taggedcount=Counter(tagged)
+
+    #find n most common
+    if numResults > len(unicount):
+            print 'Error: bagofwords parameter numResults is greater than number of types.  Choose smaller number next time.'
+    wordbag=unicount.most_common()[:numResults]
+    wordbag=dict(wordbag)
+    #POSbag=taggedcount.most_common()[:numResults]
+    
+    return (wordbag.keys())#, POSbag)
+
+
+### Author: Betty
+### Reviewed: 
+### Input: 
+### Output: 
+### Comments:
+###  -Originally in ngramprobs.py, but moved here for simplicity
+def ngrams(filelist):
+    uniwords=[]
+    for f in filelist:
+        uniwords.extend(parse(f))
+    #create bi-,tri-,quadragram lists
+    biwords=[]
+    triwords=[]
+    quadwords=[]
+    words2=uniwords[1:]
+    words3=uniwords[2:]
+    words4=uniwords[3:]
+    biwords=[uniwords[i] + ' ' + words2[i] for i in range(len(words2))]
+    triwords=[uniwords[i] + ' '  + words2[i] + ' '  + words3[i] for i in range(len(words3))]
+    quadwords=[uniwords[i] + ' '  + words2[i] + ' '  + words3[i] + ' '  + words4[i] for i in range(len(words4))]
+    return (uniwords, biwords, triwords, quadwords)
+
+def ngramcounts(uniwords, biwords, triwords, quadwords):
+    #initialize word count dictionaries
+    unicount=Counter(uniwords)
+    bicount=Counter(biwords)
+    tricount=Counter(triwords)
+    quadcount=Counter(quadwords)    
+    return (unicount, bicount, tricount, quadcount)
+
+def GTprobs(unicount, bicount, tricount, quadcount):
+    #NLTK Simple GT Probs
+    uniGT=SimpleGoodTuringProbDist(FreqDist(unicount))
+    biGT=SimpleGoodTuringProbDist(FreqDist(bicount))
+    triGT=SimpleGoodTuringProbDist(FreqDist(tricount))
+    quadGT=SimpleGoodTuringProbDist(FreqDist(quadcount))
+    return (uniGT, biGT, triGT, quadGT)
+
+
+### Author: Betty
+### Reviewed: 
+### Input: filename, Good-Turing probabilities of ngrams from an author (output of GTprobs)
+### Output: returns uni-, bi-, tri-, quadra-gram log-probability of text in filename
+### Comments:
+###  -POS tags require numpy
+def getngramprobs(filename, uniGT, biGT, triGT, quadGT):
+        [unigrams, bigrams, trigrams, quadgrams]=ngrams([filename])
+        uniprob=0
+        biprob=0
+        triprob=0
+        quadprob=0
+        flag=0
+        for i in range(len(unigrams)):
+                prob=uniGT.prob(unigrams[i])
+                if prob< 0.00000001:
+                        prob= 0.00000001
+                        flag=1
+                uniprob+=math.log10(prob)
+        for i in range(len(bigrams)):
+                prob=biGT.prob(bigrams[i])
+                if prob< 0.00000001:
+                        prob= 0.00000001
+                        flag=1
+                biprob+=math.log10(prob)
+        for i in range(len(trigrams)):
+                prob=triGT.prob(trigrams[i])
+                if prob< 0.00000001:
+                        prob= 0.00000001
+                        flag=1
+                triprob+=math.log10(prob)
+        for i in range(len(quadgrams)):
+                prob=quadGT.prob(quadgrams[i])
+                if prob< 0.00000001:
+                        prob= 0.00000001
+                        flag=1
+                quadprob+=math.log10(prob)
+        if flag:
+                print "SimpleGT error: unknown probability is 0.0. Smoothing applied."
+        return (uniprob, biprob, triprob, quadprob)
