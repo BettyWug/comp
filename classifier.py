@@ -1,43 +1,52 @@
 import nltk, random
-from indices import parse, aveSenLen, senLenVar, aveWordLen, getPosDist, getAveTTR, getUniPerp, getUniCounts, getngramprobs, bagofwords, wordlengthSD
+from indices import parse, aveSenLen, senLenVar, aveWordLen, getPosDist, getAveTTR, getUniPerp, getUniCounts, gettextGT, bagofwords, wordlengthSD
 from ngramprobs import ngrams, ngramcounts, GTprobs
+from sys import getsizeof
 
 # BL: This function creates list of features from string
 def features(s, numResults, uniGT, biGT, triGT, quadGT):
-##    feature_array=[]
-##    feature_array.extend([aveSenLen(s)])
-##    feature_array.extend([senLenVar(s)])
-##    feature_array.extend([aveWordLen(s)])
-##    feature_array.extend([wordlengthSD(s)])
-
-    #getPosDist(input) #requires numpy
-    #feature_array.extend([getAveTTR(s, 100)]) #arbitrary n
-    #feature_array.extend([getUniPerp(s, getUniCounts(s))])
     
 ##    bag=(bagofwords(s, numResults))
 ##    #print bag
-##    print s[:100]
 ##    bagout=""
 ##    for n in range(numResults):
 ##        bagout+=",'freqword"+str(n)+"':bag["+str(n)+"]"
 ##    print bagout
-    #[u, b, t, q]=getngramprobs(s, uniGT, biGT, triGT, quadGT)
+    #[u, b, t, q]=gettextGT([s], uniGT, biGT, triGT, quadGT)
     out="{'avg sent len': aveSenLen(s),'avg sent sd':senLenVar(s)"
-    out+=",'avg word len':aveWordLen(s),'avg word sd':wordlengthSD(s)"
-    #out+=",'type-token ratio':getAveTTR(s, 100)"
+    #out+=",'avg word len':aveWordLen(s),'avg word sd':wordlengthSD(s)"
+    out+=",'type-token ratio':getAveTTR(s, 100)"
     #out+=",'unigram log-probs':u,'bigram log-probs':b,'quadgram log-probs':q"
     #out+=",'trigram log-probs':t"
-    #out+=bagout[1:]
+##    out+=","
+##    out+=bagout[1:]
     out+="}"
     try:
         features=eval(out)
+        print features
     except(IndexError):
         print bag
         print s[:100]
         return 999
-    print out
     #print "Features are: avg sent len, avg sent sd, avg word len, avg word sd, most frequent words (n), n-gram log-probs, type-token ratio, PERPLEXITY?"
     return features
+
+def makeFeatureList(filelist, training_set, test_set):
+    #From texts from author only, calculate n-gram probs
+    #Will be input to feature extractor
+    [u,b,t,q]=ngrams(filelist)
+    [u2,b2,t2,q2]=ngramcounts(u,b,t,q)
+    [uniGT, biGT, triGT, quadGT]=GTprobs(u2,b2,t2,q2)
+    
+    #create feature set for training data
+    training_feature_set = [(features(text, 5, uniGT, biGT, triGT, quadGT), author) for (text, author) in training_set]
+    test_feature_set = [features(text, 5, uniGT, biGT, triGT, quadGT) for (text) in test_set]
+    #print 'triGT size: ' + str(getsizeof(training_feature_sets))
+    print 'training_set:'
+    print training_feature_set
+    print 'test_set:'
+    print test_feature_set
+    return training_feature_set, test_feature_set
 
 ##### Metrics #####
 def accuracy():
@@ -74,54 +83,75 @@ for i in range(len(data)):
 
 
 #random shuffle to pick author for training set
+
+
+#randomly pick sme number of books from other authors for training set and test set
+otherlist=[]
+num=0
+sizeIdx=0
+setlength=4
+
 randNums=range(len(data))
 random.shuffle(randNums)
-randAuthor=author[randNums[0]] #classify this author
-AuthorBookList=booksDict[randAuthor]
-########randomly remove one for testing purposes
-random.shuffle(AuthorBookList)
-author_test=AuthorBookList.pop()
+pickedAuthor=author[randNums[0]] #classify this author
+Author_train=booksDict[pickedAuthor]
 
-#randomly pick sme number of books from other authors for training set
-otherlist=[]
-i=1
-while len(otherlist)<len(AuthorBookList):
-    if randNums[i] not in AuthorBookList:
-        otherlist.append(randNums[i])
-    i+=1
+non_author_test=[]
+#non-author test and train sets
+while sizeIdx<(setlength):
+    if randNums[num] not in Author_train:
+        if sizeIdx>=setlength/2:
+            #add num to test set
+            non_author_test.append(randNums[num])
+            sizeIdx+=1
+        else:
+            #add num to training set
+            otherlist.append(randNums[num])
+            sizeIdx+=1
+    num+=1 # iterate to next num in randNums
 
-#######DEBUG##########
-AuthorBookList=[0]
-otherlist=[5]
+#author train set, test set
+Author_test=[]
+for j in range(setlength/2):
+    Author_test.append(Author_train.pop())
+Author_train=Author_train[:(setlength/2)]
 
-#compile training set
-labelled_books_author = ([(text[i], randAuthor) for i in AuthorBookList])
-labelled_books_other = ([(text[o], author[o]) for o in otherlist])
+#compile list of test authors
+test_set=Author_test+non_author_test
+random.shuffle(test_set)
+
+
+### DEBUG ### Shortens runtime so that n-grams are calculated based on 1 text only
+Author_train=[Author_train[0]]
+
+#compile text training set
+labelled_books_author = ([(text[i], pickedAuthor) for i in Author_train])
+labelled_books_other = ([(text[o], 'Other') for o in otherlist])
 training_set=labelled_books_author + labelled_books_other
 random.shuffle(training_set)
+print 'Finished training set'
+#compile text test set
+test_set = ([(text[i]) for i in test_set])
+
 
 ## Calculate GTprob for current author' texts (needed to calculate GTProbs of individual texts)
 filelist=[]
-for idx in AuthorBookList:
+for idx in Author_train:
     filelist.extend(text[idx])
-[u,b,t,q]=ngrams(filelist)
-[u2,b2,t2,q2]=ngramcounts(u,b,t,q)
-[uniGT, biGT, triGT, quadGT]=GTprobs(u2,b2,t2,q2)
+print 'finished making filelist.  Ready to make Feature List'
+print len(test_set)
+[train, test] =makeFeatureList(filelist, training_set, test_set)
 
-#create feature set for training data
-#try:
-training_feature_sets = [(features(text, 5, uniGT, biGT, triGT, quadGT), author) for (text, author) in training_set]
-    
-print training_feature_sets
-#train classifier
-classifier = nltk.NaiveBayesClassifier.train(training_feature_sets)
+##train classifier
+print 'training classifiers'
+classifier = nltk.NaiveBayesClassifier.train(train)
 
 #print most informative features
-classifier.show_most_informative_features(5)
+print 'Most informative Features'
+print classifier.most_informative_features(5)
 
-#test classifier
-classifier.classify(features(text[author_test], 5, uniGT, biGT, triGT, quadGT)) #author
-classifier.classify(features(text[i], 5, uniGT, biGT, triGT, quadGT)) #non-author
+##test classifier
+classifier.classify(test[0])
 
 
 
