@@ -1,4 +1,4 @@
-import urllib2, time, random
+import urllib2, time
 
 ### INPUT: a csv of books to download, like textCSV
 ### OUTPUT: a list of lists (one per book) of metadata,
@@ -32,8 +32,8 @@ def download(callNum):
 		return text
 	except Exception:
 		print 'ERROR:'
-		print url+' doesn\'t exist'
-		return -1
+		print url+' couldn\'t be accessed.'
+		return 'THIS FILE COULDN\'T BE DOWNLOADED'
 
 ### INPUT: filepath to a csv of books, like books.csv
 ### OUTPUT: like makeList(), but with the txt file as entry [4]
@@ -55,14 +55,24 @@ def makeDatabase(csvFilepath):
 			text = download(book[2])
 			book.append(text)
 			print 'WAITING 5 SECONDS...'
-			###time.sleep(1)
+			time.sleep(5)
 			print 'done'
 			i += 1
 	print 'DATABASE PREPARED'
 	return db
 
+### MAIN:
 db = makeDatabase('books.csv')
-open('database.txt','w')
-outfile = open('database.txt','r+')
-print 'FILE WRITTEN. EXITING.'
-outfile.write(str(db))
+print 'BEGINNING FILE WRITING'
+for book in db:
+	print 'Writing: ' + book[0]
+	fname = str(book[2])+'.txt'
+	open(fname,'w')
+	tempfile = open(fname,'r+')
+	tempfile.write(str(book))
+	print 'DONE. Written to: ' + fname
+print 'WRITING FULL DATABASE FILE TO: db.txt'
+open('db.txt','r+')
+tempfile = open('db.txt','r+')
+tempfile.write(str(db))
+print 'ALL FILES WRITTEN. EXITING.'
