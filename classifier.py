@@ -80,7 +80,7 @@ def makeFeatureList(filelist, training_set, test_set):
 ##### Metrics #####
 ##Input: test set, author-idx vector, test-set-idx, author that is being identified,
 ##Output: Accuracy, precision, recall
-def test_metrics(test, author, test_set_idx, pickedAuthor):
+def test_metrics(classifier, test, author, test_set_idx, pickedAuthor):
     classifier_output=[]
     actual_answer=[]
     for t in range(len(test)): #make sure size of test isn't 1
@@ -240,13 +240,13 @@ def main(pickedAuthor,setlength):
         print 'Most informative Features'
         print classifier.most_informative_features(5)
         #Evaluation
-        [accuracy, precision, recall]=test_metrics(test, author, test_set_idx, pickedAuthor)
+        [accuracy, precision, recall]=test_metrics(classifier, test, author, test_set_idx, pickedAuthor)
         return accuracy, precision, recall
 
 ### SHELL ####
-iterations=8 #test
-setlength=8 #Total 8 in the corpus
-authors=['Twain, Mark', 'Dickens, Charles', 'Shakespeare, William']
+iterations=1 #how many repetitions, (more repetitions for a better measure of results)
+setlength=8 #Total 8 in the corpus, but can be any value from 2 - 8
+authors=['Shakespeare, William', 'Twain, Mark']# ['Dickens, Charles'] not recommended
 evalDict={}
 for a in authors:
         total_acc=0
