@@ -7,8 +7,7 @@ Each file contains in an array:
 ['title', 'author', gutenberg#', 'type of text', 'text of book']
 These include 8 works each from Shakespeare, Dickens, and Twain.
 
-
-How to run:
+#How to run:
 
   classifier.py
   In the part of the script named shell (at the very bottom), you can specify
@@ -23,6 +22,16 @@ How to run:
 example call from command prompt:
   python classifier.py
 
+
+#How to compile novel corpus from scratch:
+
+run dataTools from command prompt to scrape all the books specified
+in books.csv
+ex. python dataTools
+Outputs individual files with one book in each, and one big file with all
+the individual files combined.
+Make sure the individual files are in the same directory as the classifier.py
+Note: For some texts, a manual find/replace needed to escape apostophes (' -> \')
   
 #####Details, Details ###############################################
 Sub-functions:
