@@ -1,4 +1,4 @@
-import nltk, random, re
+import nltk, random, re, os
 from indices import parse, aveSenLen, senLenVar, aveWordLen, getPosDist, getAveTTR, getUniPerp, getUniCounts, gettextGT, bagofwords, wordlengthSD
 from ngramprobs import ngrams, ngramcounts, GTprobs
 from sys import *
@@ -10,6 +10,7 @@ from sys import *
 def clean(raw, c):
 	i = 0
 	asts = []
+	print len(raw)
 	while i < len(raw)-2:
 		if raw[i] == raw[i+1] == raw[i+2] == '*':
 			asts.append(i)
@@ -20,6 +21,7 @@ def clean(raw, c):
 			diffs[index] = asts[i+1]-asts[i]
 	top = 0
 	topI = 0
+	print len(asts)
 	for index in diffs:
 		if diffs[index] > top:
 			top = diffs[index]
@@ -36,14 +38,15 @@ def clean(raw, c):
 
 # BL: This function creates list of features from string
 def features(s, numResults, uniGT, biGT, triGT, quadGT):
-    
+
+    #bag of words
     bag=(bagofwords(s, numResults))
-    #print bag
     bagout=""
     for n in range(numResults):
         bagout+=",'freqword"+str(n)+"':bag["+str(n)+"]"
-    print bagout
+    #ngrams
     [u, b, t, q]=gettextGT([s], uniGT, biGT, triGT, quadGT)
+    #write all features into string, then eval
     out="{'avg sent len': aveSenLen(s),'avg sent sd':senLenVar(s)"
     out+=",'avg word len':aveWordLen(s),'avg word sd':wordlengthSD(s)"
     out+=",'type-token ratio':getAveTTR(s, 100)"
@@ -60,7 +63,6 @@ def features(s, numResults, uniGT, biGT, triGT, quadGT):
         print len(s)
         print s
         features=[999]
-    #print "Features are: avg sent len, avg sent sd, avg word len, avg word sd, most frequent words (n), n-gram log-probs, type-token ratio, PERPLEXITY?"
     return features
 
 def makeFeatureList(filelist, training_set, test_set):
@@ -73,11 +75,6 @@ def makeFeatureList(filelist, training_set, test_set):
     #create feature set for training data
     training_feature_set = [(features(text, 5, uniGT, biGT, triGT, quadGT), author) for (text, author) in training_set]
     test_feature_set = [features(text, 5, uniGT, biGT, triGT, quadGT) for (text) in test_set]
-    #print 'triGT size: ' + str(getsizeof(training_feature_sets))
-##    print 'training_set:'
-##    print training_feature_set
-##    print 'test_set:'
-##    print test_feature_set
     return training_feature_set, test_feature_set
 
 ##### Metrics #####
@@ -90,7 +87,7 @@ def test_metrics(test, author, test_set_idx, pickedAuthor):
         classifier_output.append(classifier.classify(test[t]))
         actual_answer.append(author[test_set_idx[t]])
 
-    #In lsit f actual authors, replace non-Author with 'Other'
+    #In list f actual authors, replace non-Author with 'Other'
     for a in range(len(actual_answer)):
         if actual_answer[a]!=pickedAuthor:
             actual_answer[a]='Other'
@@ -144,8 +141,15 @@ def test_metrics(test, author, test_set_idx, pickedAuthor):
 def main(pickedAuthor,setlength):
         print 'main'
         # cd to dir, load all texts
-        f=open('db.txt')
-        data=eval(f.read())
+        files=[f for f in os.listdir('.') if re.match("[0-9]+\.txt",f)]
+        data=[]
+        for currfile in files:
+                f=open(currfile)
+                print 'file opened'
+                a=f.read()
+                print 'file read'
+                data.append(eval(a))
+                f.close()
 
         #split data into author and text
         print 'read data'
@@ -162,6 +166,10 @@ def main(pickedAuthor,setlength):
                 booksDict[currauthor].append(i)
             else:
                 booksDict[currauthor]=[i]
+            print "Data length: " + str(len(data))
+            print data[i][0] + " " + data[i][1] + " " + str(i)
+            print data[i][3]
+            print len(data[i][4])
             cleaned = clean(data[i][4],data[i][3])
             text.append(cleaned)
         print 'finished reading corpus'
@@ -170,15 +178,13 @@ def main(pickedAuthor,setlength):
         print'authors'
         print author
 
-        #randomly pick n number of books from other authors for training set and test set
+        #randomly pick books from other authors for training set and test set
         otherlist=[]
         num=0
         sizeIdx=0
-        #setlength=8 #Was constant, now is an input
 
         randNums=range(len(data))
         random.shuffle(randNums)
-        pickedAuthor='Shakespeare, William' #argv[1] #classify this author
         Author_train=booksDict[pickedAuthor]
         random.shuffle(Author_train)
 
@@ -208,8 +214,6 @@ def main(pickedAuthor,setlength):
         print Author_train
         print otherlist
         print test_set_idx
-        ### DEBUG ### Shortens runtime so that n-grams are calculated based on 1 text only
-        Author_train=[range(24)]
 
         #compile text training set
         labelled_books_author = ([(text[i], pickedAuthor) for i in Author_train])
@@ -240,9 +244,9 @@ def main(pickedAuthor,setlength):
         return accuracy, precision, recall
 
 ### SHELL ####
-iterations=2 #test
-setlength=2 #Total 8 in the corpus
-authors=['Shakespeare, William','Twain, Mark', 'Dickens, Charles']
+iterations=8 #test
+setlength=8 #Total 8 in the corpus
+authors=['Twain, Mark', 'Dickens, Charles', 'Shakespeare, William']
 evalDict={}
 for a in authors:
         total_acc=0
